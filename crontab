@@ -1,0 +1,3 @@
+* * * * * root echo blah >> /root/test1
+*/5 * * * * root echo blah >> /root/test2
+*/1 * * * * root echo blah >> /root/test3
