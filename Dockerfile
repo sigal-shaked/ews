@@ -10,7 +10,8 @@ RUN apt-get dist-upgrade -y
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install packages 
-RUN apt-get install -y supervisor
+RUN apt-get install -y supervisor lxml python-mysqldb python-requests git
+RUN cd /opt && git clone https://github.com/rep/hpfeeds.git && cd hpfeeds && python setup.py install
 
 # Setup user, groups and configs
 RUN addgroup --gid 2000 tpot
