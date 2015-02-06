@@ -1,3 +1,5 @@
-* * * * * root echo blah >> /root/test1
-*/5 * * * * root echo blah >> /root/test2
-*/1 * * * * root echo blah >> /root/test3
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+*/2 * * * * root cp /data/ews/conf/* /opt/ews/; cd /opt/ews/; /usr/bin/python ews.py 
+#*/2 * * * * root cd /opt/ews/; /usr/bin/python ews.py
