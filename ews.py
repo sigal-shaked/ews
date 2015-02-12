@@ -30,7 +30,7 @@ import fnmatch
 import logging
 
 name = "EWS Poster"
-version = "v1.7.5b"
+version = "v1.7.6b"
 
 
 def ewswebservice(ems):
@@ -321,9 +321,10 @@ def buildjson(jesm,DATA,REQUEST,ADATA):
     return jesm
 
 def writejson(jesm):
-    with open(ECFG["jsondir"],'a+') as f:
-        f.write(json.dumps(jesm, sort_keys=False, indent=4, separators=(',', ': ')))
-        f.close()
+    if len(jesm) > 0:
+        with open(ECFG["jsondir"],'a+') as f:
+            f.write(json.dumps(jesm, sort_keys=False, indent=4, separators=(',', ': ')))
+            f.close()
 
 def verbosemode(MODUL,DATA,REQUEST,ADATA):
     logme(MODUL,"---- " + MODUL + " ----" ,("VERBOSE"),ECFG)
@@ -383,7 +384,13 @@ def glastopfv3():
 
     c.execute("SELECT max(id) from events")
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(c.fetchone()[0]))
+    maxid = c.fetchone()["max(id)"]
+
+    if maxid is None:
+        logme(MODUL,"[ERROR] No entry's in Glastopf Database. Abort!",("P2","LOG"),ECFG)
+        return
+
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
 
     # read alerts from database
 
@@ -510,7 +517,13 @@ def glastopfv2():
 
     c.execute("SELECT max(id) from log")
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'mysqlid',-1)),int(c.fetchone()["max(id)"]))
+    maxid = c.fetchone()["max(id)"]
+
+    if maxid is None:
+        logme(MODUL,"[ERROR] No entry's in Glastopf Database. Abort!",("P2","LOG"),ECFG)
+        return
+
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
 
     # read alerts from database
 
@@ -738,7 +751,14 @@ def dionaea():
 
     c.execute("SELECT max(connection) from connections;")
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)), int(c.fetchone()[0]))
+    maxid = c.fetchone()["max(connection)"]
+
+    if maxid is None:
+        logme(MODUL,"[ERROR] No entry's in Dionaea Database. Abort!",("P2","LOG"),ECFG)
+        return
+
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
+
 
     # read alerts from database
 

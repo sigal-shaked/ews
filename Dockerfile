@@ -1,6 +1,6 @@
 # Dionaea Dockerfile by MO 
 #
-# VERSION 0.4
+# VERSION 0.5
 FROM ubuntu:14.04.1
 MAINTAINER MO
 
