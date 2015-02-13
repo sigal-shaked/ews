@@ -1,5 +1,4 @@
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-#*/2 * * * * root cp /data/ews/conf/* /opt/ews/; cd /opt/ews/; /usr/bin/python ews.py 
 */2 * * * * root cd /opt/ews/; /usr/bin/python ews.py -c /data/ews/conf/
