@@ -15,6 +15,6 @@ The `supervisord.conf` is used to start ewsposter under supervision of superviso
 
 Using upstart, copy the `upstart/ews.conf` to `/etc/init/ews.conf` and start using
 
-    service start ews
+    service ews start
 
 This will make sure that the docker container is started with the appropriate rights and port mappings. Further, it autostarts during boot.
