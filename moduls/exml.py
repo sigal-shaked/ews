@@ -43,7 +43,7 @@ def ewsalert(esm,DATA,REQUEST,ADATA):
         else:
             mytype = "string"
 
-        etree.SubElement(Alert,"AdditionalData",type=mytype,meaning=key).text = urllib.quote(str(value))
+        etree.SubElement(Alert,"AdditionalData",type=mytype,meaning=key).text = urllib.quote(str(value).encode('ascii', 'ignore'))
 
     return esm
 

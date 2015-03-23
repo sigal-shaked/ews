@@ -5,7 +5,6 @@ import re
 import sys
 import os
 import time
-import httplib
 import ConfigParser
 import hashlib
 from linecache import getline
@@ -13,9 +12,9 @@ from datetime import datetime
 from lxml import etree
 
 from moduls.exml import ewsauth, ewsalert
-from moduls.einit import locksocket, ecfg
+from moduls.einit import locksocket, ecfg, daycounterreset
 from moduls.elog import logme
-from moduls.etoolbox import ip4or6, readcfg, readonecfg, timestamp
+from moduls.etoolbox import ip4or6, readcfg, readonecfg, timestamp, calcminmax, countme
 
 import json
 import sqlite3
@@ -27,10 +26,9 @@ import urllib
 import hpfeeds
 import fnmatch
 
-import logging
 
 name = "EWS Poster"
-version = "v1.7.6b"
+version = "v1.7.7b"
 
 
 def ewswebservice(ems):
@@ -79,7 +77,7 @@ def ewswebservice(ems):
             logme(MODUL,"XML Result != ok ( %s) (%s)" % (xmlresult,webservice.text) ,("LOG","VERBOSE"),ECFG)
             return False
 
-        if ECFG["a.verbose"] == True:
+        if ECFG["a.verbose"] is True:
             logme(MODUL,"---- Webservice Report ----" ,("VERBOSE"),ECFG)
             logme(MODUL,"HOST          : %s" % (host) ,("VERBOSE"),ECFG)
             logme(MODUL,"XML Result    : %s" % (xmlresult) ,("VERBOSE"),ECFG)
@@ -102,34 +100,6 @@ def ewswebservice(ems):
         logme(MODUL,"HTTP Errorcode != 200 (%s)" % (str(e)) ,("LOG","VERBOSE"),ECFG)
         return False
 
-
-def countme(Section,Item,Count):
-
-    z = ConfigParser.RawConfigParser()
-    z.read(ECFG["homedir"] + os.sep + "ews.idx")
-
-    if z.has_section(Section) != True:
-        z.add_section(Section)
-
-    if z.has_option(Section,Item) != True:
-        z.set(Section,Item,0)
-
-    if Count >= 0:
-        z.set(Section,Item,Count)
-    elif Count == -2:
-        z.set(Section,Item,str(int(z.get(Section,Item)) + 1))
-    elif Count == -3:
-        z.set(Section,Item,0)
-
-    with open(ECFG["homedir"] + os.sep + "ews.idx", 'wb') as countfile:
-        z.write(countfile)
-        countfile.close
-
-    if Count == -1:
-        return z.get(Section,Item)
-
-    return
-
 def viewcounter(MODUL,x,y):
 
     if y  == 100:
@@ -141,18 +111,6 @@ def viewcounter(MODUL,x,y):
         y += 1
 
     return x,y
-
-def calcminmax(MODUL,imin,imax):
-
-    if int(ECFG["sendlimit"]) > 0:
-        if (imax - imin) > int(ECFG["sendlimit"]):
-            logme(MODUL,"Need to send : " + str(imax -imin) + " limit is : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
-            imax = imin +  int(ECFG["sendlimit"])
-
-    if imax == 0:
-        logme(MODUL,"Empty Database ! Abort !",("LOG","P3"),ECFG)
-
-    return imin,imax
 
 def sender():
 
@@ -185,7 +143,7 @@ def sender():
                 EWSALERT = alert.read()
                 alert.close()
 
-            if ewswebservice(EWSALERT) == True:
+            if ewswebservice(EWSALERT) is True:
                 os.remove(DIR + os.sep + files)
             else:
                 fpart = files.split('.')
@@ -209,7 +167,7 @@ def sender():
 
     def filelist(DIR):
 
-        if os.path.isdir(DIR) != True:
+        if os.path.isdir(DIR) is not True:
             logme(MODUL,"Error missing dir " + DIR + " Abort !",("P1","EXIT"),ECFG)
         else:
             return os.listdir(DIR)
@@ -217,7 +175,7 @@ def sender():
     clean_dir(ECFG["spooldir"],MODUL)
     del_job(ECFG["spooldir"],MODUL)
 
-    if check_job(ECFG["spooldir"],MODUL) == False:
+    if check_job(ECFG["spooldir"],MODUL) is False:
         return
 
     send_job(ECFG["spooldir"],MODUL)
@@ -237,17 +195,17 @@ def buildews(esm,DATA,REQUEST,ADATA):
 
 def sendews(esm):
 
-    if ECFG["a.ewsonly"] == True:
+    if ECFG["a.ewsonly"] is True:
         writeews(etree.tostring(esm, pretty_print=True))
         return
 
-    if ECFG["a.debug"] == True:
+    if ECFG["a.debug"] is True:
         writeews(etree.tostring(esm, pretty_print=True))
 
-    if ECFG["ews"] == True and ewswebservice(etree.tostring(esm)) != True:
+    if ECFG["ews"] is True and ewswebservice(etree.tostring(esm)) is not True:
         writeews(etree.tostring(esm, pretty_print=True))
 
-    if ECFG["hpfeed"] == True:
+    if ECFG["hpfeed"] is True:
         hpfeedsend(esm)
 
     return
@@ -263,12 +221,12 @@ def malware(DIR,FILE,KILL):
     if not os.path.isdir(DIR):
         return 1,DIR + " NOT EXISTS!"
 
-    if os.path.isfile(DIR + os.sep + FILE) == True:
+    if os.path.isfile(DIR + os.sep + FILE) is True:
         if os.path.getsize(DIR + os.sep + FILE) <= 5 * 1024 * 1024:
-            file = base64.encodestring(open(DIR + os.sep + FILE).read())
-            if KILL == True:
+            malwarefile = base64.encodestring(open(DIR + os.sep + FILE).read())
+            if KILL is True:
                 os.remove(DIR + os.sep + FILE)
-            return 0,file
+            return 0,malwarefile
         else:
             return 1,"FILE " + DIR + os.sep + FILE + " is bigger than 5 MB!"
     else:
@@ -321,7 +279,7 @@ def buildjson(jesm,DATA,REQUEST,ADATA):
     return jesm
 
 def writejson(jesm):
-    if len(jesm) > 0:
+    if len(jesm) > 0 and ECFG["json"] is True:
         with open(ECFG["jsondir"],'a+') as f:
             f.write(json.dumps(jesm, sort_keys=False, indent=4, separators=(',', ': ')))
             f.close()
@@ -370,7 +328,7 @@ def glastopfv3():
 
     # is sqlitedb exist ?
 
-    if os.path.isfile(HONEYPOT["sqlitedb"]) == False:
+    if os.path.isfile(HONEYPOT["sqlitedb"]) is False:
         logme(MODUL,"[ERROR] Missing sqlitedb file " + HONEYPOT["sqlitedb"] + ". Abort !",("P3","LOG"),ECFG)
         return
 
@@ -390,7 +348,7 @@ def glastopfv3():
         logme(MODUL,"[ERROR] No entry's in Glastopf Database. Abort!",("P2","LOG"),ECFG)
         return
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1,ECFG)),int(maxid),ECFG)
 
     # read alerts from database
 
@@ -411,7 +369,7 @@ def glastopfv3():
         # filter empty requests and nagios checks
 
         if  row["request_url"] == os.sep or row["request_url"] == "/index.do?hash=DEADBEEF&activate=1":
-            countme(MODUL,'sqliteid',row["id"])
+            countme(MODUL,'sqliteid',row["id"],ECFG)
             continue
 
         # Prepair and collect Alert Data
@@ -435,15 +393,15 @@ def glastopfv3():
                   }
 
         if "request_raw" in  row.keys() and len(row["request_raw"]) > 0:
-            REQUEST["raw"] = base64.standard_b64encode(row["request_raw"])
-
+            #REQUEST["raw"] = base64.standard_b64encode(row["request_raw"])
+            REQUEST["raw"] = base64.encodestring(row["request_raw"])
 
         if "filename" in  row.keys() and row["filename"] != None:
-           error,file = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
+           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
            if error == 0:
-                REQUEST["binary"] = file
+                REQUEST["binary"] = malwarefile
            else:
-                logme(MODUL,file,("P1","LOG"),ECFG)
+                logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
  
         # Collect additional Data
 
@@ -470,10 +428,10 @@ def glastopfv3():
         esm = buildews(esm,DATA,REQUEST,ADATA)
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-        countme(MODUL,'sqliteid',row["id"])
-        countme(MODUL,'daycounter', -2)
+        countme(MODUL,'sqliteid',row["id"],ECFG)
+        countme(MODUL,'daycounter', -2,ECFG)
 
-        if ECFG["a.verbose"] == True:
+        if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
 
     con.close()
@@ -523,7 +481,7 @@ def glastopfv2():
         logme(MODUL,"[ERROR] No entry's in Glastopf Database. Abort!",("P2","LOG"),ECFG)
         return
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1,ECFG)),int(maxid),ECFG)
 
     # read alerts from database
 
@@ -544,7 +502,7 @@ def glastopfv2():
         # filter nagios checks
 
         if row["req"] == "/index.do?hash=DEADBEEF&activate=1":
-            countme(MODUL,'mysqlid',row["id"])
+            countme(MODUL,'mysqlid',row["id"],ECFG)
             continue
 
         # Prepair and collect Alert Data
@@ -568,11 +526,11 @@ def glastopfv2():
                   }
 
         if row["filename"] != None:
-           error,file = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
+           error,malwarefile = malware(HONEYPOT["malwaredir"],row["filename"],ECFG["del_malware_after_send"])
            if error == 0:
-                REQUEST["binary"] = file
+                REQUEST["binary"] = malwarefile
            else:
-                logme(MODUL,file,("P1","LOG"),ECFG)
+                logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
 
         # Collect additional Data
 
@@ -589,10 +547,10 @@ def glastopfv2():
         esm = buildews(esm,DATA,REQUEST, ADATA)
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-        countme(MODUL,'mysqlid',row["id"])
-        countme(MODUL,'daycounter', -2)
+        countme(MODUL,'mysqlid',row["id"],ECFG)
+        countme(MODUL,'daycounter', -2,ECFG)
 
-        if ECFG["a.verbose"] == True:
+        if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
 
 
@@ -644,7 +602,7 @@ def kippo():
         logme(MODUL,"[ERROR] No entry's in Kippo Database. Abort!",("P2","LOG"),ECFG)
         return
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'mysqlid',-1)), int(maxid))
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1,ECFG)),int(maxid),ECFG)
 
     # read alerts from database
 
@@ -702,10 +660,10 @@ def kippo():
         esm = buildews(esm,DATA,REQUEST,ADATA)
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-        countme(MODUL,'mysqlid',row["id"])
-        countme(MODUL,'daycounter', -2)
+        countme(MODUL,'mysqlid',row["id"],ECFG)
+        countme(MODUL,'daycounter', -2,ECFG)
 
-        if ECFG["a.verbose"] == True:
+        if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
 
     con.close()
@@ -732,12 +690,12 @@ def dionaea():
 
     # Malwaredir exist ?
 
-    if os.path.isdir(HONEYPOT["malwaredir"]) == False:
+    if os.path.isdir(HONEYPOT["malwaredir"]) is False:
         logme(MODUL,"[ERROR] Missing Malware Dir " + HONEYPOT["malwaredir"] + ". Abort !",("P3","LOG"),ECFG)
 
-    # is sqlitedb exist ?
+     # is sqlitedb exist ?
 
-    if os.path.isfile(HONEYPOT["sqlitedb"]) == False:
+    if os.path.isfile(HONEYPOT["sqlitedb"]) is False:
         logme(MODUL,"[ERROR] Missing sqlitedb file " + HONEYPOT["sqlitedb"] + ". Abort !",("P3","LOG"),ECFG)
         return
 
@@ -757,8 +715,7 @@ def dionaea():
         logme(MODUL,"[ERROR] No entry's in Dionaea Database. Abort!",("P2","LOG"),ECFG)
         return
 
-    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1)),int(maxid))
-
+    imin, imax = calcminmax(MODUL,int(countme(MODUL,'sqliteid',-1,ECFG)),int(maxid),ECFG)
 
     # read alerts from database
 
@@ -779,7 +736,7 @@ def dionaea():
         # filter empty remote_host
 
         if row["remote_host"] == "": 
-            countme(MODUL,'sqliteid',row["connection"])
+            countme(MODUL,'sqliteid',row["connection"],ECFG)
             continue
 
         # Prepair and collect Alert Data
@@ -807,11 +764,11 @@ def dionaea():
         check = c.fetchone()
 
         if check is not None:
-           error,file = malware(HONEYPOT["malwaredir"],check[0],ECFG["del_malware_after_send"])
+           error,malwarefile = malware(HONEYPOT["malwaredir"],check[0],ECFG["del_malware_after_send"])
            if error == 0:
-               REQUEST["binary"] = file
+               REQUEST["binary"] = malwarefile
            else:
-               logme(MODUL,file,("P1","LOG"),ECFG)
+               logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
 
         # Collect additional Data
 
@@ -824,10 +781,10 @@ def dionaea():
         esm = buildews(esm,DATA,REQUEST,ADATA)
         jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-        countme(MODUL,'sqliteid',row["connection"])
-        countme(MODUL,'daycounter', -2)
+        countme(MODUL,'sqliteid',row["connection"],ECFG)
+        countme(MODUL,'daycounter', -2,ECFG)
 
-        if ECFG["a.verbose"] == True:
+        if ECFG["a.verbose"] is True:
             verbosemode(MODUL,DATA,REQUEST,ADATA)
 
     con.close()
@@ -854,12 +811,12 @@ def honeytrap():
 
     # Attacking file exists ?
 
-    if os.path.isfile(HONEYPOT["attackerfile"]) == False:
+    if os.path.isfile(HONEYPOT["attackerfile"]) is False:
         logme(MODUL,"[ERROR] Missing Attacker File " + HONEYPOT["attackerfile"] + ". Abort !",("P3","LOG"),ECFG)
 
     # Payloaddir exist ?
 
-    if os.path.isdir(HONEYPOT["payloaddir"]) == False:
+    if os.path.isdir(HONEYPOT["payloaddir"]) is False:
         logme(MODUL,"[ERROR] Missing Payload Dir " + HONEYPOT["payloaddir"] + ". Abort !",("P3","LOG"),ECFG)
 
     # New Version are use ?
@@ -879,7 +836,7 @@ def honeytrap():
 
     # count limit
 
-    imin = int(countme(MODUL,'fileline',-1))
+    imin = int(countme(MODUL,'fileline',-1,ECFG))
 
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
@@ -938,11 +895,11 @@ def honeytrap():
 
                 for mfile in os.listdir(HONEYPOT["payloaddir"]):
                    if fnmatch.fnmatch(mfile, sfile):
-                       error,file = malware(HONEYPOT["payloaddir"],mfile,False)
+                       error , payloadfile = malware(HONEYPOT["payloaddir"],mfile,False)
                        if error == 0:
-                           REQUEST["raw"] = file
+                           REQUEST["raw"] = payloadfile
                        else:
-                           logme(MODUL,file,("P1","LOG"),ECFG)
+                           logme(MODUL,"Mission Malwarefile %s" % row["filename"] ,("P1","LOG"),ECFG)
 
 
             # Collect additional Data
@@ -955,10 +912,10 @@ def honeytrap():
             esm = buildews(esm,DATA,REQUEST,ADATA)
             jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-            countme(MODUL,'fileline',-2)
-            countme(MODUL,'daycounter', -2)
+            countme(MODUL,'fileline',-2,ECFG)
+            countme(MODUL,'daycounter', -2,ECFG)
 
-            if ECFG["a.verbose"] == True:
+            if ECFG["a.verbose"] is True:
                 verbosemode(MODUL,DATA,REQUEST,ADATA)
 
 
@@ -983,12 +940,12 @@ def rdpdetect():
 
     # iptables file exists ?
 
-    if os.path.isfile(HONEYPOT["iptableslog"]) == False:
+    if os.path.isfile(HONEYPOT["iptableslog"]) is False:
         logme(MODUL,"[ERROR] Missing Iptables LogFile " + HONEYPOT["iptableslog"] + ". Abort !",("P3","LOG"),ECFG)
 
     # count limit
 
-    imin = int(countme(MODUL,'fileline',-1))
+    imin = int(countme(MODUL,'fileline',-1,ECFG))
 
     if int(ECFG["sendlimit"]) > 0:
         logme(MODUL,"Send Limit is set to : " + str(ECFG["sendlimit"]) + ". Adapting to limit!",("P1"),ECFG)
@@ -1047,10 +1004,10 @@ def rdpdetect():
             esm = buildews(esm,DATA,REQUEST,ADATA)
             jesm = buildjson(jesm,DATA,REQUEST,ADATA)
 
-            countme(MODUL,'fileline',-2)
-            countme(MODUL,'daycounter', -2)
+            countme(MODUL,'fileline',-2,ECFG)
+            countme(MODUL,'daycounter', -2,ECFG)
 
-            if ECFG["a.verbose"] == True:
+            if ECFG["a.verbose"] is True:
                 verbosemode(MODUL,DATA,REQUEST,ADATA)
 
 
@@ -1072,7 +1029,19 @@ if __name__ == "__main__":
     global ECFG
     ECFG = ecfg(name,version)
 
-    if ECFG["a.ewsonly"] == False:
+    lock = locksocket(name)
+
+    if lock is True:
+        logme(MODUL,"Create lock socket successfull.",("P1"),ECFG)
+    else:
+        logme(MODUL,"Another Instance is running !",("P1"),ECFG)
+        logme(MODUL,"EWSrun finish.",("P1","EXIT"),ECFG)
+
+
+    if ECFG["a.daycounter"] is True:
+        daycounterreset(lock,ECFG)
+
+    if ECFG["a.ewsonly"] is False:
         sender()
 
     if readonecfg("GLASTOPFV3","glastopfv3",ECFG["cfgfile"]).lower() == "true":

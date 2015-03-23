@@ -58,37 +58,30 @@ def ecfg(name,version):
     if args.configpath:
         ECFG["path2"] = args.configpath
 
-        if os.path.isdir(args.configpath) != True:
+        if os.path.isdir(args.configpath) is not True:
             logme(MODUL,"ConfigPath %s did not exist. Abort !" % (args.configpath),("P1","EXIT"),ECFG)
     else:
         ECFG["path2"] = ""
-
-    # create lock Socket
-
-    lock = locksocket(name)
 
     # say hello
 
     logme(MODUL,name + " " + version + " (c) by Markus Schroer <markus.schroer@telekom.de>\n",("P0"),ECFG)
 
-    if lock == True:
-        logme(MODUL,"Create lock socket successfull.",("P1"),ECFG)
-
-     # read EWSPoster Main Path
+    # read EWSPoster Main Path
 
     ECFG["path"] = os.path.dirname(os.path.abspath(__file__)).replace("/moduls","")
 
     if ECFG["path2"] == "":
         ECFG["path2"] = ECFG["path"]
 
-    if os.path.isfile(ECFG["path2"] + os.sep + "ews.cfg" ) == False:
+    if os.path.isfile(ECFG["path2"] + os.sep + "ews.cfg" ) is False:
         logme(MODUL,"Missing EWS Config %s. Abort !"%(ECFG["path2"] + os.sep + "ews.cfg"),("P1","EXIT"),ECFG)
     else:
         ECFG["cfgfile"] = ECFG["path2"] + os.sep + "ews.cfg"
 
     # Create IDX File if not exist
 
-    if os.path.isfile(ECFG["path"] + os.sep + "ews.idx" ) == False:
+    if os.path.isfile(ECFG["path"] + os.sep + "ews.idx" ) is False:
         os.open(ECFG["path"] + os.sep + "ews.idx", os.O_RDWR|os.O_CREAT )
         logme(MODUL,"Create ews.idx counterfile",("P1"),ECFG)
 
@@ -103,7 +96,7 @@ def ecfg(name,version):
 
     MCFG["ip"] = readonecfg("MAIN","ip", ECFG["cfgfile"])
 
-    if os.path.isfile(ewsip)== True:
+    if os.path.isfile(ewsip) is True:
         MCFG["ip"] = readonecfg("MAIN","ip", ewsip)
         if MCFG["ip"].lower() == "null":
              logme(MODUL,"Error IP Address in File " + ewsip + " not set. Abort !",("P1","EXIT"),ECFG)
@@ -136,23 +129,23 @@ def ecfg(name,version):
 
     # home dir available ?
 
-    if os.path.isdir(MCFG["homedir"]) != True:
+    if os.path.isdir(MCFG["homedir"]) is not True:
         logme(MODUL,"Error missing homedir " + MCFG["homedir"] + " Abort !",("P1","EXIT"),ECFG)
     else:
         os.chdir(MCFG["homedir"])
 
     # spool dir available ?
 
-    if os.path.isdir(MCFG["spooldir"]) != True:
+    if os.path.isdir(MCFG["spooldir"]) is not True:
         logme(MODUL,"Error missing spooldir " + MCFG["spooldir"] + " Abort !",("P1","EXIT"),ECFG)
 
     # log dir available ?
 
     MCFG["logdir"] = readonecfg("MAIN","logdir", ECFG["cfgfile"])
 
-    if MCFG["logdir"] != "NULL" and MCFG["logdir"] != "FALSE" and os.path.isdir(MCFG["logdir"]) == True:
+    if MCFG["logdir"] != "NULL" and MCFG["logdir"] != "FALSE" and os.path.isdir(MCFG["logdir"]) is True:
         MCFG["logfile"] = MCFG["logdir"] + os.sep + "ews.log"
-    elif MCFG["logdir"] != "NULL" and MCFG["logdir"] != "FALSE" and os.path.isdir(MCFG["logdir"]) != True:
+    elif MCFG["logdir"] != "NULL" and MCFG["logdir"] != "FALSE" and os.path.isdir(MCFG["logdir"]) is True:
         logme(MODUL,"Error missing logdir " + MCFG["logdir"] + " Abort !",("P1","EXIT"),ECFG)
     else:
         MCFG["logfile"] = "/var/log" + os.sep + "ews.log"
@@ -193,7 +186,7 @@ def ecfg(name,version):
     else:
        EWSJSON["json"] = False
 
-    if EWSJSON["jsondir"] != "NULL" and  EWSJSON["jsondir"] != "FALSE" and os.path.isdir(EWSJSON["jsondir"]) == True:
+    if EWSJSON["jsondir"] != "NULL" and  EWSJSON["jsondir"] != "FALSE" and os.path.isdir(EWSJSON["jsondir"]) is True:
          EWSJSON["jsondir"] =  EWSJSON["jsondir"] + os.sep + "ews.json"
     else:
         logme(MODUL,"Error missing jsondir " + EWSJSON["jsondir"] + " Abort !",("P1","EXIT"),ECFG)
@@ -202,16 +195,6 @@ def ecfg(name,version):
     ECFG.update(EWSCFG)
     ECFG.update(HCFG)
     ECFG.update(EWSJSON)
-
-    # daycounter start
-
-    if ECFG["a.daycounter"] == True:
-        daycounterreset(lock,ECFG)
-
-    # debug
-
-    #for key, value in ECFG.items():
-    #    print key + " :", value
 
     return ECFG
 

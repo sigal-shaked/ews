@@ -5,7 +5,7 @@ import time
 
 def logme(MODUL,MESSAGE,HANDLE,ECFG):
 
-    if ECFG["a.silent"] == False:
+    if ECFG["a.silent"] is False:
 
         if "P0" in HANDLE:
             print MESSAGE
@@ -19,10 +19,10 @@ def logme(MODUL,MESSAGE,HANDLE,ECFG):
         if "P3" in HANDLE:
             print "    => [" + MODUL + "] " + MESSAGE
 
-        if "VERBOSE" in HANDLE and ECFG["a.verbose"] == True:
+        if "VERBOSE" in HANDLE and ECFG["a.verbose"] is True:
             print MESSAGE
  
-    if ECFG["a.debug"] == True and "DEBUG" in HANDLE:
+    if ECFG["a.debug"] is True and "DEBUG" in HANDLE:
         print MESSAGE
 
     if "LOG" in HANDLE:
